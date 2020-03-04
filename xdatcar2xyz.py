@@ -1,6 +1,8 @@
 import numpy as np
 import sys
 
+#Usage: python xdatcar2xyz.py XDATCAR my_file.xyz
+
 def angle(v1,v2):
     return np.arccos(np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2)))
 
