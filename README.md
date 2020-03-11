@@ -11,4 +11,4 @@ Extracts energy, pressure and temperature data for an NPT MD simulation.
 Plots one of the variables from get_md_data.sh.
 
 ## orbital_pdos.py
-Extracts the orbital-projected pdos from the DOSCAR file (LORBIT = 11). 
+Extracts the orbital-projected pdos from the DOSCAR file (LORBIT = 11). Requires input file called "projection" - see example. 
