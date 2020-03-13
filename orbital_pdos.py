@@ -17,21 +17,19 @@ for line in proj:
         elements=line.split('=')[1].split('#')[0].split()
     if 'atom_numbers' in line:
         temp=line.split('=')[1].split('#')[0].split(',')
-        l=[t.split() for t in temp]
-        temp=[i for sublist in l for i in sublist]
+        temp=[t.split() for t in temp]
+        temp=[i for sublist in temp for i in sublist]
         ranges=[i.find('-') for i in temp]
         ranges=[i for i, x in enumerate(ranges) if x == 1]
         atom_numbers=[]
         for i in range(len(temp)):
             if i in ranges:
-                string=temp[i]
-                ssplit=string.split('-')
+                ssplit=temp[i].split('-')
                 newlist=range(int(ssplit[0]),int(ssplit[1])+1)
                 for n in newlist:
                     atom_numbers.append(n)
             else:
                 atom_numbers.append(int(temp[i]))
-        print(atom_numbers)
     if 'orbitals' in line:
         orbitals=line.split('=')[1].split('#')[0].split()
 
@@ -54,8 +52,19 @@ else:
     dos_up=[d[1] for d in total]
     dos_down=[d[2] for d in total]
 
-# next get pdos (projected dos)
+if elements[0] != 'All':
+    if orbitals == 'None':
+        el_dos=np.zeros((len(elements),n_bands))
+    else:
+        el_dos=np.zeros((len(elements)*len(orbitals),n_bands))
+
+if atom_numbers != 'None':
+    if orbitals == 'None':
+        atno_dos=np.zeros((len(atom_numbers),n_bands))
+    else:
+        atno_dos=np.zeros((len(atom_numbers)*len(orbitals),n_bands))
+
 for atom in range(1,2):
     start=atom*n_bands+atom+6
-    curr_pdos=data[start:start+n_bands]
+    curr_dos=data[start:start+n_bands]
      
