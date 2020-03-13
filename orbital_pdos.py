@@ -3,6 +3,11 @@ from pylab import *
 from matplotlib import rcParams
 from matplotlib import axes
 
+class OrbitalPDOS:
+    def __init__(self,dos_file='DOSCAR',proj_file='projection'):
+        self.dos_filename=dos_file
+        self.proj_filename=proj_file
+
 dos_file=open('DOSCAR')
 data=dos_file.readlines()
 dos_file.close()
