@@ -20,7 +20,7 @@ class OrbitalPDOS:
         self.spin=False
 
         self.proj_data=[]
-        self.elements=[]
+        self.species=[]
         self.atom_numbers=[]
         self.orbitals=[]
 
@@ -39,7 +39,7 @@ class OrbitalPDOS:
 
         species=data[5].split()
         n_per=data[6].split()
-        self.elements = [[species[i]]*int(v) for i,v in enumerate(n_per)]
+        self.elements = [item for sublist in ([species[i]]*int(v) for i,v in enumerate(n_per)) for item in sublist]
 
     def read_proj(self):
         file=open(self.proj_filename)
@@ -49,8 +49,8 @@ class OrbitalPDOS:
     def parse_proj(self):
         # parse proj_file
         for line in self.proj_data:
-            if 'elements' in line:
-                self.elements=line.split('=')[1].split('#')[0].split()
+            if 'species' in line:
+                self.species=line.split('=')[1].split('#')[0].split()
             if 'atom_numbers' in line:
                 if 'None' in line:
                     self.atom_numbers.append('None')
@@ -86,11 +86,11 @@ class OrbitalPDOS:
     def get_pdos(self):
         el_dos=[]
         atno_dos=[]
-        if self.elements[0] != 'All':
+        if self.species[0] != 'All':
             if self.orbitals == 'None':
-                el_dos=np.zeros((len(self.elements),self.n_bands))
+                el_dos=np.zeros((len(self.species),self.n_bands))
             else:
-                el_dos=np.zeros((len(self.elements)*len(self.orbitals),self.n_bands))
+                el_dos=np.zeros((len(self.species)*len(self.orbitals),self.n_bands))
         
         if self.atom_numbers[0] != 'None':
             if self.orbitals == 'None':
@@ -98,10 +98,11 @@ class OrbitalPDOS:
             else:
                 atno_dos=np.zeros((len(self.atom_numbers)*len(self.orbitals),self.n_bands))
 
-        for atom in range(1,2):
-            start=self.atom*self.n_bands+atom+6
-            curr_dos=self.dos_data[start:start+n_bands]
-
+        for atom in range(1,self.n_atoms+1):
+            start=atom*self.n_bands+atom+6
+            curr_dos=self.dos_data[start:start+self.n_bands]
+            el_index=self.species.index(self.elements[atom-1])
+            
     def plot_dos(self,energy=None,dos=None,labels=None):
         if energy == None:
             energy=self.energy
@@ -135,10 +136,10 @@ class OrbitalPDOS:
 
 my_pdos = OrbitalPDOS(dos_file='DOSCAR_ismear0')
 my_pdos.read_poscar()
-#my_pdos.read_proj()
-#my_pdos.parse_proj()
-#my_pdos.read_dos()
-#my_pdos.get_total_dos()
-#my_pdos.get_pdos()
+my_pdos.read_proj()
+my_pdos.parse_proj()
+my_pdos.read_dos()
+my_pdos.get_total_dos()
+my_pdos.get_pdos()
 #my_pdos.plot_dos()
      
