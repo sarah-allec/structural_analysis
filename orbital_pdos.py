@@ -36,6 +36,31 @@ class OrbitalPDOS:
         self.proj_data=file.readlines()
         file.close()
 
+    def parse_proj(self):
+        # parse proj_file
+        for line in self.proj_data:
+            if 'elements' in line:
+                self.elements=line.split('=')[1].split('#')[0].split()
+            if 'atom_numbers' in line:
+                if 'None' in line:
+                    self.atom_numbers.append('None')
+                else:
+                    temp=line.split('=')[1].split('#')[0].split(',')
+                    temp=[t.split() for t in temp]
+                    temp=[i for sublist in temp for i in sublist]
+                    ranges=[i.find('-') for i in temp]
+                    ranges=[i for i, x in enumerate(ranges) if x == 1]
+                    for i in range(len(temp)):
+                        if i in ranges:
+                            ssplit=temp[i].split('-')
+                            newlist=range(int(ssplit[0]),int(ssplit[1])+1)
+                            for n in newlist:
+                                self.atom_numbers.append(n)
+                        else:
+                            self.atom_numbers.append(int(temp[i]))
+            if 'orbitals' in line:
+                self.orbitals=line.split('=')[1].split('#')[0].split()
+
     def get_total_dos(self):
         
         total=[[float(i) for i in d.split()] for d in self.dos_data[6:6+self.n_bands]]
@@ -48,7 +73,7 @@ class OrbitalPDOS:
             self.dos_up=[d[1] for d in total]
             self.dos_down=[d[2] for d in total]
 
-    #def.get_pdos(self)
+    #def.get_pdos(self):
 
     def plot_dos(self,energy=None,dos=None,labels=None):
         if energy == None:
@@ -82,31 +107,12 @@ class OrbitalPDOS:
             fig.savefig("pdos.png",dpi=600)
 
 my_pdos = OrbitalPDOS()
-my_pdos.read_dos()
-my_pdos.get_total_dos()
-my_pdos.plot_dos()
+my_pdos.read_proj()
+my_pdos.parse_proj()
+#my_pdos.read_dos()
+#my_pdos.get_total_dos()
+#my_pdos.plot_dos()
 
-# parse proj_file
-#for line in proj:
-#    if 'elements' in line:
-#        elements=line.split('=')[1].split('#')[0].split()
-#    if 'atom_numbers' in line:
-#        temp=line.split('=')[1].split('#')[0].split(',')
-#        temp=[t.split() for t in temp]
-#        temp=[i for sublist in temp for i in sublist]
-#        ranges=[i.find('-') for i in temp]
-#        ranges=[i for i, x in enumerate(ranges) if x == 1]
-#        atom_numbers=[]
-#        for i in range(len(temp)):
-#            if i in ranges:
-#                ssplit=temp[i].split('-')
-#                newlist=range(int(ssplit[0]),int(ssplit[1])+1)
-#                for n in newlist:
-#                    atom_numbers.append(n)
-#            else:
-#                atom_numbers.append(int(temp[i]))
-#    if 'orbitals' in line:
-#        orbitals=line.split('=')[1].split('#')[0].split()
 #if elements[0] != 'All':
 #    if orbitals == 'None':
 #        el_dos=np.zeros((len(elements),n_bands))
