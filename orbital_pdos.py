@@ -87,26 +87,43 @@ class OrbitalPDOS:
         el_dos=[]
         atno_dos=[]
         if self.species[0] != 'All':
-            if self.orbitals == 'None':
+            if self.orbitals[0] == 'None':
                 el_dos=np.zeros((len(self.species),self.n_bands))
             else:
                 el_dos=np.zeros((len(self.species)*len(self.orbitals),self.n_bands))
         
         if self.atom_numbers[0] != 'None':
-            if self.orbitals == 'None':
+            if self.orbitals[0] == 'None':
                 atno_dos=np.zeros((len(self.atom_numbers),self.n_bands))
             else:
                 atno_dos=np.zeros((len(self.atom_numbers)*len(self.orbitals),self.n_bands))
 
         for atom in range(1,self.n_atoms+1):
+        #for atom in range(25,27):
             start=atom*self.n_bands+atom+6
             curr_dos=self.dos_data[start:start+self.n_bands]
-            el_index=self.species.index(self.elements[atom-1])
-            
+            if len(el_dos) != 0:
+                el_index=self.species.index(self.elements[atom-1])
+                if self.orbitals[0] == 'None':
+                    for row in range(len(curr_dos)):
+                        el_dos[el_index][row]=el_dos[el_index][row]+sum([float(r) for r in curr_dos[row].split()[1:]])
+
+                else:
+                    for row in range(len(curr_dos)):
+                        if 's' in self.orbitals:
+                            el_dos[3*el_index][row]=el_dos[3*el_index][row]+sum([float(r) for r in curr_dos[row].split()[1:3]])
+                        if 'p' in self.orbitals:
+                            el_dos[3*el_index+1][row]=el_dos[3*el_index+1][row]+sum([float(r) for r in curr_dos[row].split()[3:9]])                          
+                        if 'd' in self.orbitals:
+                            el_dos[3*el_index+2][row]=el_dos[3*el_index+2][row]+sum([float(r) for r in curr_dos[row].split()[9:]])                          
+        return el_dos
+
     def plot_dos(self,energy=None,dos=None,labels=None):
         if energy == None:
             energy=self.energy
+            print('using default energy')
         if dos == None:
+            print('using total dos')
             dos=self.total_dos
         params = {
             'axes.labelsize': 14,
@@ -140,6 +157,6 @@ my_pdos.read_proj()
 my_pdos.parse_proj()
 my_pdos.read_dos()
 my_pdos.get_total_dos()
-my_pdos.get_pdos()
-#my_pdos.plot_dos()
+pdos=my_pdos.get_pdos()
+my_pdos.plot_dos(dos=pdos,labels=['Co(s)','Co(p)','Co(d)','S(s)','S(p)'])
      
