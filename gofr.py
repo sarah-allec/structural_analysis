@@ -1,3 +1,4 @@
+import multiprocessing as mp
 import numpy as np
 from math import floor, ceil
 from ase import atoms
@@ -82,13 +83,12 @@ def rho(cell,positions,ngrid,sigma):
 
     returns:
         rho = (array) the radial density as a function of r'''
-    
-    N = len(positions) # need to change this if reading in an entire trajectory
+    N = len(positions)
     curr_r_ij = r_ij(cell,positions) 
     r_grid = np.linspace(0.5,ceil(max(curr_r_ij)),ngrid)
     return [r_grid, np.divide( 2*np.sum( f(r_grid, curr_r_ij, sigma), axis = 0 ), N)]
 
-def rdf(traj,sigma=0.15,ngrid = 100):
+def rdf(traj,sigma=0.15,ngrid = 100,n_cores = 8):
     ''' Computes R(r), the radial distribution function, and 
     g(r), the pair distribution function.
 
@@ -102,22 +102,25 @@ def rdf(traj,sigma=0.15,ngrid = 100):
         R = (array) the radial distribution function for all element types'''
 
     n_steps = len(traj)
+    N = len(traj[0].get_positions())
     g = np.zeros( (ngrid,) )
     R = np.zeros( (ngrid,) )
 
-    for i,step in enumerate(traj):
-        if i % 10 == 0:
-            print(i)
-        positions = step.get_positions()
-        cell = step.get_cell()
-
-        N = len(positions)
-        V = volume(cell)
-
-        rho_r = rho(cell,positions,ngrid,sigma)
-        r = rho_r[0]
-        g += rho_r[1]/rho_0(N,V)
-        R += np.dot( np.dot(r,r), rho_r[1] )
-    R = 4*np.pi*R / n_steps
-    g = g / n_steps
-    return np.transpose([r, g, R])
+    groups = range(0, n_steps, n_cores)
+    print(groups)
+    procs = []
+    for g in groups:
+        for c in range(n_cores):
+            step = g+c
+            if step == n_steps:
+                break
+            cell = traj[step].get_cell()
+            positions = traj[step].get_positions()
+            procs.append(mp.Process(target=rho(), args=(cell, positions, ngrid, sigma )))
+    #rho_r = np.divide(np.sum([ rho(V[i,:,:],positions[i,:,:],ngrid,sigma) for i in range(n_steps) ],axis=0), n_steps)
+    #r = rho_r[0]
+    #g = rho_r[1]/rho_0(N,V)
+    #R = np.dot( np.dot(r,r), rho_r[1] )
+    #R = 4*np.pi*R
+    #g = g
+    #return np.transpose([r, g, R])
