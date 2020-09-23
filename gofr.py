@@ -17,7 +17,14 @@ class GofR():
         self.spec_indices = {}
         for s in self.species:
             self.spec_indices[s] = [i for i,v in enumerate(self.elements) if v == s]
+        self.r_grid = 0
         self.N = 0
+        self.V = 0 
+
+        self.sigma = 0
+        self.r_ij_vec = 0
+        self.f_vec = 0
+        self.g_vec = 0
 
     def volume( self, LCC ):
         ''' Computes the volume of the simulation box
@@ -67,11 +74,10 @@ class GofR():
         vp_ij = [ np.mod( ( np.dot(LCC_inv,v) + 0.5), 1 ) - 0.5 for v in v_ij ] 
         vp_ij = [ np.matmul( LCC, vp) for vp in vp_ij ] 
     
-        r_ij = np.linalg.norm(vp_ij,axis = 1)
-    
-        return r_ij 
+        self.r_ij_vec = np.linalg.norm(vp_ij,axis = 1) 
+        return self.r_ij_vec 
 
-    def f( self, r_grid, r_ij, sigma ):
+    def f( self, r_grid=None, r_ij=None, sigma=None ):
         ''' Computes f, the atomic contributions to the radial density.
     
         args:
@@ -83,10 +89,27 @@ class GofR():
         returns:
           f = (array) the atomic contribution(s) to the radial density'''
     
+        if r_grid is None:
+            r_grid = self.r_grid
+        if r_ij is None:
+            r_ij = self.r_ij_vec
+        if sigma is None:
+            sigma = self.sigma
+
         pi_3_2 = np.power( np.sqrt(np.pi), 3)
         a = 1 / ( 4 * pi_3_2 * sigma * np.square(r_ij) )
         b = - 1 / (sigma * sigma)
-        return [a[i]*np.exp(b*(r_grid-r)**2) for i,r in enumerate(r_ij)]
+        self.f_vec = [a[i]*np.exp(b*(r_grid-r)**2) for i,r in enumerate(r_ij)]
+        return self.f_vec
+
+    def df( self ):
+        # this function should be used when little_g has been used with the current
+        # instance of the class. 
+        # To do: overload this function to be used without having ran little_g
+        coeff = (2 / ( self.sigma * self.sigma ) )
+        numerator = [ coeff * (r - self.r_grid) for r in self.r_ij_vec ]
+        df_dr = np.sum( np.multiply( numerator, self.f_vec ), axis = 0 )
+        return df_dr
 
     def rho( self, cell, positions, ngrid, sigma, indices1=None, indices2=None ):
         ''' Computes rho, the radial density, as a function of r.
@@ -102,13 +125,13 @@ class GofR():
             rho = (array) the radial density as a function of r'''
         
         curr_r_ij = self.r_ij(cell,positions,indices1,indices2) 
-        r_grid = np.linspace(0.5,8.0,ngrid)
+        self.r_grid = np.linspace(0.5,8.0,ngrid)
         if indices1 == None or indices2 == None:
-            return [r_grid, np.divide( 2*np.sum( self.f(r_grid, curr_r_ij, sigma), axis = 0 ), self.N )]
+            return [self.r_grid, np.divide( 2*np.sum( self.f(), axis = 0 ), self.N )]
         else:
             N1 = len(indices1)
             N2 = len(indices2)
-            return [r_grid, np.divide( self.N*np.sum( self.f(r_grid, curr_r_ij, sigma), axis = 0 ), (N1*N2) )]
+            return [self.r_grid, np.divide( self.N*np.sum( self.f(), axis = 0 ), (N1*N2) )]
 
     def little_g( self, step, sigma=0.15, ngrid = 100, el1=None, el2=None ):
         ''' Computes R(r), the radial distribution function, and 
@@ -123,11 +146,12 @@ class GofR():
             g = (array) the pair distribution function for all element types
             R = (array) the radial distribution function for all element types'''
 
+        self.sigma = sigma
         positions = self.traj[step].get_positions()
         cell = self.traj[step].get_cell()
         self.N = len( positions ) 
    
-        V = self.volume(cell)
+        self.V = self.volume(cell)
        
         if el1 != None and el2 != None:
             indices1 = self.spec_indices[el1]
@@ -140,5 +164,23 @@ class GofR():
             coeff = self.N
             rho_r = self.rho(cell,positions,ngrid,sigma)
         r = rho_r[0] 
-        g = rho_r[1]/self.rho_0(self.N,V)
-        return np.transpose([r, g])
+        g = rho_r[1]/self.rho_0(self.N,self.V)
+        self.g_vec =  np.transpose([r, g])
+        return self.g_vec
+
+    def peaks( self, el1=None, el2=None ):
+        df_dr = self.df()
+        if el1 != None and el2 != None:
+            N1 = len(self.spec_indices[el1])
+            N2 = len(self.spec_indices[el2])
+            coeff = self.V / (N1 * N2)
+        else:
+            coeff = 2 * self.V / (self.N * self.N)
+       
+        dg_dr = coeff * df_dr
+
+        indices = [ i for i,v in enumerate(dg_dr[0:-1]) if dg_dr[i] > 0 and dg_dr[i+1] < 0 ]
+        
+        r = self.r_grid
+        peaks = [ r[i] + ( r[i+1] - r[i] ) * ( dg_dr[i] / ( dg_dr[i] - dg_dr[i+1] ) ) for i in indices ]
+        return peaks
