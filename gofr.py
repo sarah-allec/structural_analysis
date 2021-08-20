@@ -167,20 +167,3 @@ class GofR():
         g = rho_r[1]/self.rho_0(self.N,self.V)
         self.g_vec =  np.transpose([r, g])
         return self.g_vec
-
-    def peaks( self, el1=None, el2=None ):
-        df_dr = self.df()
-        if el1 != None and el2 != None:
-            N1 = len(self.spec_indices[el1])
-            N2 = len(self.spec_indices[el2])
-            coeff = self.V / (N1 * N2)
-        else:
-            coeff = 2 * self.V / (self.N * self.N)
-       
-        dg_dr = coeff * df_dr
-
-        indices = [ i for i,v in enumerate(dg_dr[0:-1]) if dg_dr[i] > 0 and dg_dr[i+1] < 0 ]
-        
-        r = self.r_grid
-        peaks = [ r[i] + ( r[i+1] - r[i] ) * ( dg_dr[i] / ( dg_dr[i] - dg_dr[i+1] ) ) for i in indices ]
-        return peaks
